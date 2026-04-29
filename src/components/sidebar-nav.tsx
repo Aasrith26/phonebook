@@ -24,14 +24,15 @@ function isActiveRoute(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function SidebarNav() {
+type SidebarNavProps = {
+  onNavigate?: () => void;
+};
+
+export function SidebarNav({ onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav
-      aria-label="Primary"
-      className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible"
-    >
+    <nav aria-label="Primary" className="flex flex-col gap-2">
       {NAV_ITEMS.map((item) => {
         const isActive = isActiveRoute(pathname, item.href);
 
@@ -39,7 +40,9 @@ export function SidebarNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`min-w-[220px] rounded-xl border px-4 py-3 transition lg:min-w-0 ${
+            prefetch
+            onClick={onNavigate}
+            className={`rounded-xl border px-4 py-3 transition ${
               isActive
                 ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-strong)]"
                 : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--accent)] hover:bg-[var(--surface-muted)]"
