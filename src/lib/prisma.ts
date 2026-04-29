@@ -12,6 +12,9 @@ const pool =
   globalForPrisma.prismaPool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,
+    // Keep serverless connection usage conservative on Vercel.
+    max: process.env.VERCEL ? 1 : 10,
+    idleTimeoutMillis: 10_000,
   });
 
 const adapter = globalForPrisma.prismaAdapter ?? new PrismaPg(pool);
