@@ -26,11 +26,15 @@ function getTrimmedValue(formData: FormData, key: string) {
 }
 
 function normalizePhoneNumber(phoneNumber: string) {
-  return phoneNumber.replace(/\s+/g, "");
+  return phoneNumber.replace(/\D+/g, "");
 }
 
 function isValidPhoneNumber(phoneNumber: string) {
-  return /^[+\d][\d().\-\s]{5,20}$/.test(phoneNumber);
+  return /^\d{10}$/.test(phoneNumber);
+}
+
+function isValidAlphabeticName(value: string) {
+  return /^[A-Za-z][A-Za-z\s.'-]*$/.test(value);
 }
 
 export async function saveContact(
@@ -40,6 +44,7 @@ export async function saveContact(
   const name = getTrimmedValue(formData, "name");
   const organization = getTrimmedValue(formData, "organization");
   const categoryInput = getTrimmedValue(formData, "category");
+  const otherCategoryInput = getTrimmedValue(formData, "otherCategory");
   const rawPhoneNumber = getTrimmedValue(formData, "phoneNumber");
   const designation = getTrimmedValue(formData, "designation");
   const address = getTrimmedValue(formData, "address");
@@ -48,6 +53,8 @@ export async function saveContact(
   const category = CONTACT_CATEGORIES.includes(categoryInput as ContactCategory)
     ? (categoryInput as ContactCategory)
     : "Others";
+  const otherCategory =
+    category === "Others" && otherCategoryInput ? otherCategoryInput : "";
 
   if (!name || !phoneNumber) {
     return {
@@ -56,16 +63,31 @@ export async function saveContact(
     };
   }
 
+  if (!isValidAlphabeticName(name)) {
+    return {
+      status: "error",
+      message: "Name must contain alphabets only.",
+    };
+  }
+
   if (!isValidPhoneNumber(rawPhoneNumber)) {
     return {
       status: "error",
-      message: "Please enter a valid phone number.",
+      message: "Phone number must be exactly 10 digits.",
+    };
+  }
+
+  if (category === "Others" && !otherCategory) {
+    return {
+      status: "error",
+      message: "Please specify the category type for Others.",
     };
   }
 
   if (
     name.length > MAX_FIELD_LENGTH ||
     organization.length > MAX_FIELD_LENGTH ||
+    otherCategory.length > MAX_FIELD_LENGTH ||
     phoneNumber.length > MAX_FIELD_LENGTH ||
     designation.length > MAX_FIELD_LENGTH ||
     address.length > MAX_FIELD_LENGTH
@@ -89,6 +111,7 @@ export async function saveContact(
         name,
         organization: organization || null,
         category,
+        otherCategory: otherCategory || null,
         phoneNumber,
         designation: designation || null,
         address: address || null,

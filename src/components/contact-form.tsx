@@ -20,6 +20,7 @@ type ContactValues = {
   name: string;
   organization: string;
   category: ContactCategory;
+  otherCategory: string;
   phoneNumber: string;
   designation: string;
   address: string;
@@ -30,6 +31,7 @@ const initialValues: ContactValues = {
   name: "",
   organization: "",
   category: "Others",
+  otherCategory: "",
   phoneNumber: "",
   designation: "",
   address: "",
@@ -37,7 +39,11 @@ const initialValues: ContactValues = {
 };
 
 function isValidPhoneNumber(phoneNumber: string) {
-  return /^[+\d][\d().\-\s]{5,20}$/.test(phoneNumber.trim());
+  return /^\d{10}$/.test(phoneNumber.trim());
+}
+
+function isValidAlphabeticName(value: string) {
+  return /^[A-Za-z][A-Za-z\s.'-]*$/.test(value.trim());
 }
 
 function SaveButton() {
@@ -64,12 +70,13 @@ export function ContactForm() {
     () => [
       {
         title: "Contact name",
-        description: "Who are you speaking with?",
+        description: "Enter the contact's full name.",
         render: (
           <input
             value={values.name}
             onChange={(event) => {
-              setValues((prev) => ({ ...prev, name: event.target.value }));
+              const alphabetsOnly = event.target.value.replace(/[^A-Za-z\s.'-]/g, "");
+              setValues((prev) => ({ ...prev, name: alphabetsOnly }));
               setStepError("");
             }}
             autoComplete="name"
@@ -97,23 +104,39 @@ export function ContactForm() {
         title: "Category",
         description: "Select the contact category.",
         render: (
-          <select
-            value={values.category}
-            onChange={(event) => {
-              setValues((prev) => ({
-                ...prev,
-                category: event.target.value as ContactCategory,
-              }));
-              setStepError("");
-            }}
-            className="w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
-          >
-            {CONTACT_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            <select
+              value={values.category}
+              onChange={(event) => {
+                const nextCategory = event.target.value as ContactCategory;
+                setValues((prev) => ({
+                  ...prev,
+                  category: nextCategory,
+                  otherCategory: nextCategory === "Others" ? prev.otherCategory : "",
+                }));
+                setStepError("");
+              }}
+              className="w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
+            >
+              {CONTACT_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            {values.category === "Others" ? (
+              <input
+                value={values.otherCategory}
+                onChange={(event) => {
+                  setValues((prev) => ({ ...prev, otherCategory: event.target.value }));
+                  setStepError("");
+                }}
+                placeholder="Specify category type"
+                maxLength={MAX_FIELD_LENGTH}
+                className="w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
+              />
+            ) : null}
+          </div>
         ),
       },
       {
@@ -123,11 +146,16 @@ export function ContactForm() {
           <input
             value={values.phoneNumber}
             onChange={(event) => {
-              setValues((prev) => ({ ...prev, phoneNumber: event.target.value }));
+              const digitsOnly = event.target.value.replace(/\D+/g, "").slice(0, 10);
+              setValues((prev) => ({ ...prev, phoneNumber: digitsOnly }));
               setStepError("");
             }}
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]{10}"
+            maxLength={10}
             autoComplete="tel"
-            placeholder="+91 98765 43210"
+            placeholder="10-digit phone number"
             className="w-full rounded-xl border border-[var(--line)] bg-white px-4 py-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
           />
         ),
@@ -189,6 +217,9 @@ export function ContactForm() {
       if (!values.name.trim()) {
         return "Name is required.";
       }
+      if (!isValidAlphabeticName(values.name)) {
+        return "Name must contain alphabets only.";
+      }
       if (values.name.trim().length > MAX_FIELD_LENGTH) {
         return "Name is too long.";
       }
@@ -198,12 +229,21 @@ export function ContactForm() {
       return "Organization is too long.";
     }
 
+    if (stepIndex === 2 && values.category === "Others") {
+      if (!values.otherCategory.trim()) {
+        return "Please specify the category type.";
+      }
+      if (values.otherCategory.trim().length > MAX_FIELD_LENGTH) {
+        return "Other category is too long.";
+      }
+    }
+
     if (stepIndex === 3) {
       if (!values.phoneNumber.trim()) {
         return "Phone number is required.";
       }
       if (!isValidPhoneNumber(values.phoneNumber)) {
-        return "Please enter a valid phone number.";
+        return "Phone number must be exactly 10 digits.";
       }
     }
 
@@ -248,6 +288,7 @@ export function ContactForm() {
       <input type="hidden" name="name" value={values.name} />
       <input type="hidden" name="organization" value={values.organization} />
       <input type="hidden" name="category" value={values.category} />
+      <input type="hidden" name="otherCategory" value={values.otherCategory} />
       <input type="hidden" name="phoneNumber" value={values.phoneNumber} />
       <input type="hidden" name="designation" value={values.designation} />
       <input type="hidden" name="address" value={values.address} />

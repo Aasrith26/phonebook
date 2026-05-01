@@ -44,21 +44,45 @@ function DeleteIconButton() {
 }
 
 type ContactCallButtonProps = {
+  contactId: string;
+  contactName: string;
+  organization?: string | null;
   phoneNumber: string;
   className?: string;
 };
 
 export function ContactCallButton({
+  contactId,
+  contactName,
+  organization,
   phoneNumber,
   className = "",
 }: ContactCallButtonProps) {
+  const normalizedPhoneNumber = phoneNumber.replace(/\D+/g, "");
+
+  async function logCallAndDial() {
+    localStorage.setItem(
+      "pending_call_history",
+      JSON.stringify({
+        contactId,
+        contactName,
+        organization: organization ?? "",
+        phoneNumber: normalizedPhoneNumber,
+        createdAt: Date.now(),
+      })
+    );
+
+    window.location.href = `tel:${normalizedPhoneNumber}`;
+  }
+
   return (
-    <a
-      href={`tel:${phoneNumber}`}
+    <button
+      type="button"
+      onClick={logCallAndDial}
       className={`inline-flex items-center justify-center rounded-lg border border-[var(--brand-soft)] bg-[var(--brand-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--brand-strong)] transition hover:bg-[#d9e8fb] ${className}`.trim()}
     >
       Call
-    </a>
+    </button>
   );
 }
 

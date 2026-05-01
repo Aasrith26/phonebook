@@ -1,52 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { CallConfirmationListener } from "@/components/call-confirmation-listener";
 import { SidebarNav } from "@/components/sidebar-nav";
 
 type AppShellProps = {
   children: React.ReactNode;
 };
-
-function isActiveRoute(pathname: string, href: string) {
-  if (href === "/") {
-    return pathname === "/";
-  }
-
-  return pathname.startsWith(href);
-}
-
-function TopActionButtons() {
-  const pathname = usePathname();
-  const navItems = [
-    { href: "/", label: "Add Contact" },
-    { href: "/phonebook", label: "Phone Book" },
-  ];
-
-  return (
-    <nav aria-label="Quick actions" className="grid w-full grid-cols-2 gap-2 sm:w-auto">
-      {navItems.map((item) => {
-        const isActive = isActiveRoute(pathname, item.href);
-
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            prefetch
-            className={`rounded-lg border px-3 py-2 text-center text-sm font-semibold transition ${
-              isActive
-                ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                : "border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--accent)] hover:text-[var(--accent-strong)]"
-            }`}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
 
 export function AppShell({ children }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -65,8 +25,7 @@ export function AppShell({ children }: AppShellProps) {
         </aside>
 
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm shadow-[var(--shadow)] sm:p-6 lg:p-8">
-          <header className="mb-6 flex items-center gap-3">
-            <TopActionButtons />
+          <header className="mb-6 flex items-center justify-end">
             <button
               type="button"
               aria-label="Open menu"
@@ -132,6 +91,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
         <SidebarNav onNavigate={() => setIsMenuOpen(false)} />
       </aside>
+      <CallConfirmationListener />
     </div>
   );
 }

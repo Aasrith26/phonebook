@@ -14,6 +14,11 @@ const NAV_ITEMS = [
     label: "Phone Book",
     description: "Browse and sort all contacts",
   },
+  {
+    href: "/call-history",
+    label: "Call History",
+    description: "Track calls made from this dashboard",
+  },
 ];
 
 function isActiveRoute(pathname: string, href: string) {
