@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 type CallPayload = {
   contactId?: string;
@@ -46,6 +47,8 @@ export async function POST(request: Request) {
         phoneNumber,
       },
     });
+    revalidatePath("/call-history");
+    revalidateTag("call-history-filters", "max");
 
     return Response.json({ ok: true, id: entry.id });
   } catch {

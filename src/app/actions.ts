@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
   CONTACT_CATEGORIES,
@@ -126,6 +126,7 @@ export async function saveContact(
   }
 
   revalidatePath("/phonebook");
+  revalidateTag("contact-filters", "max");
 
   return {
     status: "success",
@@ -158,6 +159,9 @@ export async function deleteContact(
   }
 
   revalidatePath("/phonebook");
+  revalidatePath("/call-history");
+  revalidateTag("contact-filters", "max");
+  revalidateTag("call-history-filters", "max");
 
   return {
     status: "success",

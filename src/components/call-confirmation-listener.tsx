@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const PENDING_CALL_KEY = "pending_call_history";
 const MIN_WAIT_BEFORE_PROMPT_MS = 5_000;
@@ -60,7 +59,6 @@ async function createCallHistoryFromConfirmation(pendingCall: PendingCall) {
 }
 
 export function CallConfirmationListener() {
-  const router = useRouter();
   const [pendingCall, setPendingCall] = useState<PendingCall | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -149,7 +147,6 @@ export function CallConfirmationListener() {
       setIsSaving(false);
     }
 
-    router.refresh();
   }
 
   if (!pendingCall) {

@@ -1,5 +1,9 @@
-import type { Contact, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  getCityFromAddress,
+  getContactFilterOptions,
+} from "@/lib/filter-options";
 import {
   ContactCallButton,
   ContactDeleteButton,
@@ -31,23 +35,6 @@ function normalizeStringParam(value: string | string[] | undefined) {
   return typeof normalized === "string" ? normalized.trim() : "";
 }
 
-function getCityFromAddress(address: string | null) {
-  if (!address) {
-    return "";
-  }
-
-  const parts = address
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "";
-  }
-
-  return parts[parts.length - 1];
-}
-
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
@@ -70,10 +57,24 @@ function getContactOrderBy(sort: SortOption): Prisma.ContactOrderByWithRelationI
 type ContactGroup = {
   key: string;
   organization: string;
-  contacts: Contact[];
+  contacts: ContactListItem[];
 };
 
-function buildContactGroups(contacts: Contact[]) {
+type ContactListItem = Prisma.ContactGetPayload<{
+  select: {
+    id: true;
+    name: true;
+    organization: true;
+    category: true;
+    otherCategory: true;
+    phoneNumber: true;
+    designation: true;
+    address: true;
+    createdAt: true;
+  };
+}>;
+
+function buildContactGroups(contacts: ContactListItem[]) {
   const grouped = new Map<string, ContactGroup>();
 
   for (const contact of contacts) {
@@ -113,11 +114,10 @@ export default async function PhonebookPage({
   const selectedCity = normalizeStringParam(resolvedSearchParams.city);
   const selectedDesignation = normalizeStringParam(resolvedSearchParams.designation);
 
-  let contacts: Contact[] = [];
+  let contacts: ContactListItem[] = [];
   let hasLoadError = false;
-
-  try {
-    contacts = await prisma.contact.findMany({
+  const [contactsResult, filterOptionsResult] = await Promise.allSettled([
+    prisma.contact.findMany({
       where: {
         organization: selectedCompany
           ? {
@@ -138,40 +138,38 @@ export default async function PhonebookPage({
             }
           : undefined,
       },
+      select: {
+        id: true,
+        name: true,
+        organization: true,
+        category: true,
+        otherCategory: true,
+        phoneNumber: true,
+        designation: true,
+        address: true,
+        createdAt: true,
+      },
       orderBy: getContactOrderBy(sort),
-    });
-  } catch {
+    }),
+    getContactFilterOptions(),
+  ]);
+
+  if (contactsResult.status === "fulfilled") {
+    contacts = contactsResult.value;
+  } else {
     hasLoadError = true;
   }
 
-  const allContactMeta = await prisma.contact.findMany({
-    select: {
-      organization: true,
-      address: true,
-      designation: true,
-    },
-    orderBy: [{ organization: "asc" }, { designation: "asc" }],
-  });
+  const filterOptions =
+    filterOptionsResult.status === "fulfilled"
+      ? filterOptionsResult.value
+      : {
+          companyOptions: [] as string[],
+          cityOptions: [] as string[],
+          designationOptions: [] as string[],
+        };
 
-  const companyOptions = Array.from(
-    new Set(
-      allContactMeta
-        .map((item) => item.organization?.trim() || "")
-        .filter(Boolean)
-    )
-  );
-
-  const cityOptions = Array.from(
-    new Set(allContactMeta.map((item) => getCityFromAddress(item.address)).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
-
-  const designationOptions = Array.from(
-    new Set(
-      allContactMeta
-        .map((item) => item.designation?.trim() || "")
-        .filter(Boolean)
-    )
-  );
+  const { companyOptions, cityOptions, designationOptions } = filterOptions;
 
   const contactGroups = buildContactGroups(contacts);
 

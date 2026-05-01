@@ -1,5 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  getCallHistoryFilterOptions,
+  getCityFromAddress,
+} from "@/lib/filter-options";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -11,23 +15,6 @@ function normalizeStringParam(value: string | string[] | undefined) {
   return typeof normalized === "string" ? normalized.trim() : "";
 }
 
-function getCityFromAddress(address: string | null | undefined) {
-  if (!address) {
-    return "";
-  }
-
-  const parts = address
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "";
-  }
-
-  return parts[parts.length - 1];
-}
-
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-IN", {
     dateStyle: "medium",
@@ -36,7 +23,19 @@ function formatDate(date: Date) {
 }
 
 type CallWithContact = Prisma.CallHistoryGetPayload<{
-  include: { contact: true };
+  select: {
+    id: true;
+    contactName: true;
+    organization: true;
+    phoneNumber: true;
+    calledAt: true;
+    contact: {
+      select: {
+        designation: true;
+        address: true;
+      };
+    };
+  };
 }>;
 
 function buildCallGroups(calls: CallWithContact[]) {
@@ -103,36 +102,29 @@ export default async function CallHistoryPage({
     },
   };
 
-  const calls = await prisma.callHistory.findMany({
-    where,
-    include: { contact: true },
-    orderBy: { calledAt: "desc" },
-    take: 500,
-  });
+  const [calls, filterOptions] = await Promise.all([
+    prisma.callHistory.findMany({
+      where,
+      select: {
+        id: true,
+        contactName: true,
+        organization: true,
+        phoneNumber: true,
+        calledAt: true,
+        contact: {
+          select: {
+            designation: true,
+            address: true,
+          },
+        },
+      },
+      orderBy: { calledAt: "desc" },
+      take: 500,
+    }),
+    getCallHistoryFilterOptions(),
+  ]);
 
-  const allCallMeta = await prisma.callHistory.findMany({
-    include: { contact: true },
-    orderBy: { calledAt: "desc" },
-    take: 1000,
-  });
-
-  const companyOptions = Array.from(
-    new Set(allCallMeta.map((call) => call.organization?.trim() || "").filter(Boolean))
-  );
-  const cityOptions = Array.from(
-    new Set(
-      allCallMeta
-        .map((call) => getCityFromAddress(call.contact?.address))
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
-  const designationOptions = Array.from(
-    new Set(
-      allCallMeta
-        .map((call) => call.contact?.designation?.trim() || "")
-        .filter(Boolean)
-    )
-  );
+  const { companyOptions, cityOptions, designationOptions } = filterOptions;
 
   const groupedCalls = buildCallGroups(calls);
 
